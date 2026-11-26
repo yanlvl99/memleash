@@ -12,6 +12,15 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::BOOL;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowState {
+    Foreground,
+    BackgroundVisible,
+    Minimized,
+    Hidden,
+    NotFound,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WindowCandidate {
     pub pid: u32,
@@ -130,4 +139,40 @@ pub fn find_windows(pids: &[u32]) -> Vec<WindowCandidate> {
         )
     };
     scan.found
+}
+
+pub fn classify_windows(
+    candidates: &[WindowCandidate],
+    is_foreground: bool,
+) -> (WindowState, Option<&WindowCandidate>) {
+    let best_visible = candidates
+        .iter()
+        .filter(|w| w.on_screen && !w.iconic && w.area > 0)
+        .max_by_key(|w| w.area);
+
+    if is_foreground {
+        let rep = best_visible.or_else(|| candidates.iter().max_by_key(|w| w.area));
+        return (WindowState::Foreground, rep);
+    }
+
+    if let Some(win) = best_visible {
+        return (WindowState::BackgroundVisible, Some(win));
+    }
+
+    if let Some(win) = candidates.iter().find(|w| w.on_screen && w.iconic) {
+        return (WindowState::Minimized, Some(win));
+    }
+
+    if let Some(win) = candidates.iter().max_by_key(|w| w.area) {
+        return (WindowState::Hidden, Some(win));
+    }
+
+    (WindowState::NotFound, None)
+}
+
+pub fn window_state(pids: &[u32]) -> (WindowState, Option<WindowCandidate>) {
+    let is_foreground = foreground_pid().is_some_and(|fg| pids.contains(&fg));
+    let candidates = find_windows(pids);
+    let (state, rep) = classify_windows(&candidates, is_foreground);
+    (state, rep.cloned())
 }
