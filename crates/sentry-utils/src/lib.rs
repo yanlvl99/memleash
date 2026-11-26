@@ -3,11 +3,13 @@
 
 pub mod discovery;
 pub mod error;
+pub mod memory;
 pub mod process;
 pub mod utils;
 pub mod window;
 pub use discovery::{ProcessInfo, find_by_name};
 pub use error::{Result, SentryError};
+pub use memory::{MemoryAvailability, MemoryWatcher, SystemMemory, system_memory};
 pub use process::{
     ProcessId, ProcessMetrics, cap, command_line, empty_working_set, inspect, release,
     working_set_mb,

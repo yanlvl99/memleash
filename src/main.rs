@@ -4,14 +4,21 @@
 use std::collections::HashSet;
 
 use sentry_profiles::AppProfile;
-use sentry_utils::{command_line, find_by_name, foreground_pid, inspect};
+use sentry_utils::{
+    MemoryWatcher, command_line, find_by_name, foreground_pid, inspect, system_memory,
+};
 
 fn main() -> sentry_utils::Result<()> {
-    let profile = AppProfile::chromium("spotify.exe");
+    let mem = system_memory()?;
+    let watcher = MemoryWatcher::new()?;
+    let availability = watcher.availability()?;
+    println!(
+        "System RAM: {} / {} MB available ({}% load) | Availability: {:?}",
+        mem.available_mb, mem.total_mb, mem.load_percent, availability
+    );
 
+    let profile = AppProfile::chromium("Discord.exe");
     let fg = foreground_pid();
-    println!("Foreground PID: {fg:?}");
-
     let processes = find_by_name(profile.exe_name())?;
     if processes.is_empty() {
         println!("{} is not running.", profile.exe_name());
@@ -19,7 +26,12 @@ fn main() -> sentry_utils::Result<()> {
     }
 
     let pids: HashSet<u32> = processes.iter().map(|p| p.id.pid).collect();
-    println!("Found {} {} process(es):", processes.len(), profile.exe_name());
+    println!(
+        "Found {} {} process(es) (Foreground PID: {:?}):",
+        processes.len(),
+        profile.exe_name(),
+        fg
+    );
 
     for proc in processes {
         let is_root = !pids.contains(&proc.parent_pid);
