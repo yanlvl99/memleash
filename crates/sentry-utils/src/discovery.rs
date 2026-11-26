@@ -45,15 +45,14 @@ pub fn find_by_name(exe_name: &str) -> Result<Vec<ProcessInfo>> {
     let mut results = Vec::new();
     loop {
         let name = wide_to_string(&entry.szExeFile);
-        if name.eq_ignore_ascii_case(exe_name) {
-            if let Ok(id) = ProcessId::from_pid(entry.th32ProcessID) {
+        if name.eq_ignore_ascii_case(exe_name)
+            && let Ok(id) = ProcessId::from_pid(entry.th32ProcessID) {
                 results.push(ProcessInfo {
                     id,
                     parent_pid: entry.th32ParentProcessID,
                     exe_name: name,
                 });
             }
-        }
         if unsafe { Process32NextW(snapshot.0, &mut entry) }.is_err() {
             break;
         }
