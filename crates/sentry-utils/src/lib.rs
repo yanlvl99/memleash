@@ -9,6 +9,7 @@ pub mod window;
 pub use discovery::{ProcessInfo, find_by_name};
 pub use error::{Result, SentryError};
 pub use process::{
-    ProcessId, ProcessMetrics, cap, empty_working_set, inspect, release, working_set_mb,
+    ProcessId, ProcessMetrics, cap, command_line, empty_working_set, inspect, release,
+    working_set_mb,
 };
 pub use window::foreground_pid;
