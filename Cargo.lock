@@ -21,6 +21,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "sentry-profiles"
+version = "0.1.0"
+
+[[package]]
 name = "sentry-src"
 version = "0.1.0"
 dependencies = [

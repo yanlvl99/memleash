@@ -9,7 +9,7 @@ sentry-utils = { path = "crates/sentry-utils" }
 
 [workspace]
 resolver = "2"
-members = ["crates/sentry-utils"]
+members = ["crates/sentry-profiles","crates/sentry-utils"]
 
 [workspace.package]
 version = "0.1.0"
@@ -25,4 +25,5 @@ windows = { version = "0.62", features = [
     "Win32_System_ProcessStatus",
     "Win32_System_SystemInformation",
     "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_WindowsAndMessaging",
 ] }
