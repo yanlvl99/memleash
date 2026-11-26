@@ -1,3 +1,5 @@
+use sentry_utils;
+
 fn main() {
-    println!("Hello, world!");
+    println!("{}", sentry_utils::add(5, 2));
 }
