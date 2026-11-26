@@ -5,7 +5,11 @@ pub mod discovery;
 pub mod error;
 pub mod process;
 pub mod utils;
+pub mod window;
 pub use discovery::{ProcessInfo, find_by_name};
 pub use error::{Result, SentryError};
-
-pub use process::{ProcessId, cap, empty_working_set, release, working_set_mb};
+pub use process::{
+    ProcessId, ProcessMetrics, cap, command_line, empty_working_set, inspect, release,
+    working_set_mb,
+};
+pub use window::foreground_pid;
