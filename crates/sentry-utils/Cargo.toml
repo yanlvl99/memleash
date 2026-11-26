@@ -1,0 +1,9 @@
+[package]
+name = "sentry-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+windows.workspace = true
