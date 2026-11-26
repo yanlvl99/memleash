@@ -3,37 +3,11 @@
 
 use std::collections::HashSet;
 
-use sentry_profiles::{AppProfile, MatchRule, RoleConfig, SubLabelRule};
+use sentry_profiles::AppProfile;
 use sentry_utils::{command_line, find_by_name, foreground_pid, inspect};
 
 fn main() -> sentry_utils::Result<()> {
-    let profile = AppProfile::builder("spotify.exe")
-        .role("Audio", MatchRule::IsAudio, RoleConfig::new(25, 60))
-        .role("Main", MatchRule::IsRoot, RoleConfig::new(4, 38))
-        .role_with_sub(
-            "Renderer",
-            MatchRule::cmd_contains("--type=renderer"),
-            SubLabelRule::flag_value("--renderer-client-id", "#"),
-            RoleConfig::new(4, 52),
-        )
-        .role(
-            "GPU",
-            MatchRule::cmd_contains("--type=gpu-process"),
-            RoleConfig::new(4, 52),
-        )
-        .role_with_sub(
-            "Utility",
-            MatchRule::cmd_contains("--type=utility"),
-            SubLabelRule::flag_head("--utility-sub-type", '.'),
-            RoleConfig::new(4, 48),
-        )
-        .role(
-            "Crashpad",
-            MatchRule::cmd_contains("crashpad"),
-            RoleConfig::new(4, 16),
-        )
-        .fallback("Helper", RoleConfig::new(4, 48))
-        .build();
+    let profile = AppProfile::chromium("spotify.exe");
 
     let fg = foreground_pid();
     println!("Foreground PID: {fg:?}");
