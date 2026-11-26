@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
+pub mod audio;
 pub mod discovery;
 pub mod error;
 pub mod memory;
 pub mod process;
 pub mod utils;
 pub mod window;
+pub use audio::active_audio_pids;
 pub use discovery::{ProcessInfo, find_by_name};
 pub use error::{Result, SentryError};
 pub use memory::{MemoryAvailability, MemoryWatcher, SystemMemory, system_memory};
