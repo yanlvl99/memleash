@@ -76,11 +76,10 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
         return BOOL(1);
     }
 
-    if let Ok(owner) = unsafe { GetWindow(hwnd, GW_OWNER) } {
-        if !owner.0.is_null() {
+    if let Ok(owner) = unsafe { GetWindow(hwnd, GW_OWNER) }
+        && !owner.0.is_null() {
             return BOOL(1);
         }
-    }
 
     let ex_style = unsafe { GetWindowLongW(hwnd, GWL_EXSTYLE) } as u32;
     if ex_style & (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) != 0 {

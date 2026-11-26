@@ -100,11 +100,10 @@ pub fn active_audio_pids() -> Result<HashSet<u32>> {
             let Ok(control2) = control.cast::<IAudioSessionControl2>() else {
                 continue;
             };
-            if let Ok(pid) = unsafe { control2.GetProcessId() } {
-                if pid != 0 {
+            if let Ok(pid) = unsafe { control2.GetProcessId() }
+                && pid != 0 {
                     pids.insert(pid);
                 }
-            }
         }
     }
 
