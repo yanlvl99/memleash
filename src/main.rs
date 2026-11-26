@@ -4,12 +4,12 @@
 use std::collections::HashSet;
 
 use sentry_profiles::AppProfile;
-use sentry_utils::{
+use sentry_win32::{
     MemoryWatcher, active_audio_pids, command_line, find_by_name, foreground_pid, inspect,
     system_memory, window_state,
 };
 
-fn main() -> sentry_utils::Result<()> {
+fn main() -> sentry_win32::Result<()> {
     let mem = system_memory()?;
     let watcher = MemoryWatcher::new()?;
     let availability = watcher.availability()?;

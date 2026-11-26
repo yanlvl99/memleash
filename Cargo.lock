@@ -29,11 +29,11 @@ name = "sentry-src"
 version = "0.1.0"
 dependencies = [
  "sentry-profiles",
- "sentry-utils",
+ "sentry-win32",
 ]
 
 [[package]]
-name = "sentry-utils"
+name = "sentry-win32"
 version = "0.1.0"
 dependencies = [
  "thiserror",
