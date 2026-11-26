@@ -6,11 +6,11 @@ license.workspace = true
 
 [dependencies]
 sentry-profiles = { path = "crates/sentry-profiles" }
-sentry-utils = { path = "crates/sentry-utils" }
+sentry-win32 = { path = "crates/sentry-win32" }
 
 [workspace]
 resolver = "2"
-members = ["crates/sentry-profiles","crates/sentry-utils"]
+members = ["crates/sentry-profiles", "crates/sentry-win32"]
 
 [workspace.package]
 version = "0.1.0"
