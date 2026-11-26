@@ -1,7 +1,17 @@
 [package]
 name = "sentry-src"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sentry-utils = { path = "crates/sentry-utils" }
+
+[workspace]
+resolver = "2"
+members = ["crates/sentry-utils"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
-
-[dependencies]
