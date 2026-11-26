@@ -29,6 +29,13 @@ pub struct ProcessId {
     pub creation_time: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ProcessMetrics {
+    pub working_set_mb: f64,
+    pub page_fault_count: u64,
+    pub cpu_time_ms: f64,
+}
+
 impl ProcessId {
     pub fn from_pid(pid: u32) -> Result<Self> {
         let handle = ProcessHandle::open(pid, PROCESS_QUERY_INFORMATION)?;
@@ -44,7 +51,7 @@ impl ProcessHandle {
         Ok(Self(handle))
     }
 
-    fn creation_time(&self) -> Result<u64> {
+    fn times(&self) -> Result<(u64, f64)> {
         let mut creation = FILETIME::default();
         let mut exit = FILETIME::default();
         let mut kernel = FILETIME::default();
@@ -55,7 +62,16 @@ impl ProcessHandle {
                 operation: "GetProcessTimes",
                 source,
             })?;
-        Ok(((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64)
+
+        let creation_time = crate::utils::filetime_to_u64(creation);
+        let cpu_ticks = crate::utils::filetime_to_u64(kernel)
+            .saturating_add(crate::utils::filetime_to_u64(user));
+        let cpu_time_ms = cpu_ticks as f64 / 10_000.0;
+        Ok((creation_time, cpu_time_ms))
+    }
+
+    fn creation_time(&self) -> Result<u64> {
+        self.times().map(|(creation, _)| creation)
     }
 
     fn open_verified(target: ProcessId, access: PROCESS_ACCESS_RIGHTS) -> Result<Self> {
@@ -138,8 +154,9 @@ pub fn release(target: ProcessId) -> Result<()> {
     Ok(())
 }
 
-pub fn working_set_mb(target: ProcessId) -> Result<f64> {
+pub fn inspect(target: ProcessId) -> Result<ProcessMetrics> {
     let handle = ProcessHandle::open_verified(target, PROCESS_QUERY_INFORMATION)?;
+    let (_, cpu_time_ms) = handle.times()?;
     let mut counters = PROCESS_MEMORY_COUNTERS {
         cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
         ..Default::default()
@@ -150,5 +167,13 @@ pub fn working_set_mb(target: ProcessId) -> Result<f64> {
             source,
         }
     })?;
-    Ok(counters.WorkingSetSize as f64 / (1024.0 * 1024.0))
+    Ok(ProcessMetrics {
+        working_set_mb: counters.WorkingSetSize as f64 / (1024.0 * 1024.0),
+        page_fault_count: counters.PageFaultCount as u64,
+        cpu_time_ms,
+    })
+}
+
+pub fn working_set_mb(target: ProcessId) -> Result<f64> {
+    inspect(target).map(|m| m.working_set_mb)
 }
