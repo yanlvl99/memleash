@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+sentry-profiles = { path = "crates/sentry-profiles" }
 sentry-utils = { path = "crates/sentry-utils" }
 
 [workspace]

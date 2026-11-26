@@ -28,6 +28,7 @@ version = "0.1.0"
 name = "sentry-src"
 version = "0.1.0"
 dependencies = [
+ "sentry-profiles",
  "sentry-utils",
 ]
 
