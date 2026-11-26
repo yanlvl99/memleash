@@ -1,14 +1,8 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 yanlvl99
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod profile;
+pub mod role;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use profile::{AppProfile, AppProfileBuilder, Classification};
+pub use role::{MatchRule, RoleConfig, SubLabelRule};
