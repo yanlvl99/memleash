@@ -5,8 +5,8 @@ use std::collections::HashSet;
 
 use sentry_profiles::AppProfile;
 use sentry_utils::{
-    MemoryWatcher, command_line, find_by_name, foreground_pid, inspect, system_memory,
-    window_state,
+    MemoryWatcher, active_audio_pids, command_line, find_by_name, foreground_pid, inspect,
+    system_memory, window_state,
 };
 
 fn main() -> sentry_utils::Result<()> {
@@ -29,21 +29,24 @@ fn main() -> sentry_utils::Result<()> {
         return Ok(());
     }
 
+    let audio_pids = active_audio_pids().unwrap_or_default();
     let pid_list: Vec<u32> = processes.iter().map(|p| p.id.pid).collect();
     let pids: HashSet<u32> = pid_list.iter().copied().collect();
     let (win_state, main_win) = window_state(&pid_list);
     println!(
-        "Found {} {} process(es) | Window: {:?} ({})",
+        "Found {} {} process(es) | Window: {:?} ({}) | Active audio PIDs: {:?}",
         processes.len(),
         profile.exe_name(),
         win_state,
-        main_win.as_ref().map(|w| w.title.as_str()).unwrap_or("none")
+        main_win.as_ref().map(|w| w.title.as_str()).unwrap_or("none"),
+        audio_pids
     );
 
     for proc in processes {
         let is_root = !pids.contains(&proc.parent_pid);
+        let is_audio = audio_pids.contains(&proc.id.pid);
         let cmd = command_line(proc.id).unwrap_or_default();
-        let class = profile.classify(&cmd, is_root, false);
+        let class = profile.classify(&cmd, is_root, is_audio);
         let focus = if fg == Some(proc.id.pid) {
             " [FOREGROUND]"
         } else {
