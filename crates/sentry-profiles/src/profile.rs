@@ -37,6 +37,48 @@ impl AppProfile {
         }
     }
 
+    pub fn single(exe_name: impl Into<String>, config: RoleConfig) -> Self {
+        Self::builder(exe_name)
+            .role("Main", MatchRule::IsRoot, config)
+            .fallback("Main", config)
+            .build()
+    }
+
+    pub fn chromium(exe_name: impl Into<String>) -> Self {
+        Self::builder(exe_name)
+            .role("Audio", MatchRule::IsAudio, RoleConfig::new(25, 60))
+            .role(
+                "Audio",
+                MatchRule::cmd_contains("audio.mojom.audioservice"),
+                RoleConfig::new(25, 60),
+            )
+            .role("Main", MatchRule::IsRoot, RoleConfig::new(4, 38))
+            .role_with_sub(
+                "Renderer",
+                MatchRule::cmd_contains("--type=renderer"),
+                SubLabelRule::flag_value("--renderer-client-id", "#"),
+                RoleConfig::new(4, 52),
+            )
+            .role(
+                "GPU",
+                MatchRule::cmd_contains("--type=gpu-process"),
+                RoleConfig::new(4, 52),
+            )
+            .role_with_sub(
+                "Utility",
+                MatchRule::cmd_contains("--type=utility"),
+                SubLabelRule::flag_head("--utility-sub-type", '.'),
+                RoleConfig::new(4, 48),
+            )
+            .role(
+                "Crashpad",
+                MatchRule::cmd_contains("crashpad"),
+                RoleConfig::new(4, 16),
+            )
+            .fallback("Helper", RoleConfig::new(4, 48))
+            .build()
+    }
+
     pub fn exe_name(&self) -> &str {
         &self.exe_name
     }
