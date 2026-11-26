@@ -19,11 +19,14 @@ license = "GPL-3.0-or-later"
 [workspace.dependencies]
 thiserror = "2"
 windows = { version = "0.62", features = [
+    "Wdk_System_Threading",
     "Win32_Foundation",
+    "Win32_System_Kernel",
     "Win32_System_Memory",
     "Win32_System_Threading",
     "Win32_System_ProcessStatus",
     "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_Debug",
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_UI_WindowsAndMessaging",
 ] }
