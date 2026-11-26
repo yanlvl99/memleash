@@ -14,4 +14,4 @@ pub use process::{
     ProcessId, ProcessMetrics, cap, command_line, empty_working_set, inspect, release,
     working_set_mb,
 };
-pub use window::foreground_pid;
+pub use window::{WindowCandidate, find_windows, foreground_pid};
