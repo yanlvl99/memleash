@@ -77,9 +77,10 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
     }
 
     if let Ok(owner) = unsafe { GetWindow(hwnd, GW_OWNER) }
-        && !owner.0.is_null() {
-            return BOOL(1);
-        }
+        && !owner.0.is_null()
+    {
+        return BOOL(1);
+    }
 
     let ex_style = unsafe { GetWindowLongW(hwnd, GWL_EXSTYLE) } as u32;
     if ex_style & (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) != 0 {
@@ -131,12 +132,7 @@ pub fn find_windows(pids: &[u32]) -> Vec<WindowCandidate> {
         pids,
         found: Vec::new(),
     };
-    let _ = unsafe {
-        EnumWindows(
-            Some(enum_window_callback),
-            LPARAM((&raw mut scan) as isize),
-        )
-    };
+    let _ = unsafe { EnumWindows(Some(enum_window_callback), LPARAM((&raw mut scan) as isize)) };
     scan.found
 }
 
@@ -205,7 +201,10 @@ mod tests {
         assert_eq!(rep.map(|w| w.hwnd), Some(2));
 
         let minimized = [win(3, true, true, 0)];
-        assert_eq!(classify_windows(&minimized, false).0, WindowState::Minimized);
+        assert_eq!(
+            classify_windows(&minimized, false).0,
+            WindowState::Minimized
+        );
 
         // Tray-hidden windows can keep WS_MINIMIZE while on_screen is false.
         let tray_hidden = [win(4, false, true, 0)];

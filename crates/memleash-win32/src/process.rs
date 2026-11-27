@@ -19,7 +19,7 @@ use windows::Win32::System::Threading::{
     PROCESS_QUERY_INFORMATION, PROCESS_SET_QUOTA, PROCESS_VM_READ, RTL_USER_PROCESS_PARAMETERS,
 };
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 const DEFAULT_MIN_PAGES: usize = 50;
 const DEFAULT_MAX_PAGES: usize = 345;
@@ -293,6 +293,9 @@ mod tests {
         release(me).expect("release");
 
         drop(buf);
-        assert!(after < before, "expected WS to drop: before={before:.2} MB, after={after:.2} MB");
+        assert!(
+            after < before,
+            "expected WS to drop: before={before:.2} MB, after={after:.2} MB"
+        );
     }
 }

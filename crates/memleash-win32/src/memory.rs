@@ -9,7 +9,7 @@ use windows::Win32::System::Memory::{
 use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 use windows::core::BOOL;
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 const MIB: u64 = 1024 * 1024;
 
