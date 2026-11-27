@@ -3,14 +3,14 @@
 
 use std::collections::HashSet;
 
-pub use sentry_profiles as profiles;
-pub use sentry_win32 as win32;
+pub use memleash_profiles as profiles;
+pub use memleash_win32 as win32;
 
-pub use sentry_profiles::{
+pub use memleash_profiles::{
     AppProfile, AppProfileBuilder, Classification, MatchRule, RoleConfig, SubLabelRule,
 };
-pub use sentry_win32::{
-    MemoryAvailability, MemoryWatcher, ProcessId, ProcessInfo, ProcessMetrics, Result, SentryError,
+pub use memleash_win32::{
+    Error, MemoryAvailability, MemoryWatcher, ProcessId, ProcessInfo, ProcessMetrics, Result,
     SystemMemory, WindowCandidate, WindowState, active_audio_pids, cap, command_line,
     empty_working_set, find_by_name, find_windows, foreground_pid, inspect, release, system_memory,
     window_state, working_set_mb,
@@ -32,7 +32,7 @@ pub struct ScannedProcess {
 pub struct ActionReport {
     pub succeeded: usize,
     pub skipped: usize,
-    pub failures: Vec<(u32, SentryError)>,
+    pub failures: Vec<(u32, Error)>,
 }
 
 #[derive(Debug, Clone)]

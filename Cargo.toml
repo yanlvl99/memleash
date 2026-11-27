@@ -1,16 +1,16 @@
 [package]
-name = "sentry-src"
+name = "memleash"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-sentry-profiles = { path = "crates/sentry-profiles" }
-sentry-win32 = { path = "crates/sentry-win32" }
+memleash-profiles = { path = "crates/memleash-profiles" }
+memleash-win32 = { path = "crates/memleash-win32" }
 
 [workspace]
 resolver = "2"
-members = ["crates/sentry-profiles", "crates/sentry-win32"]
+members = ["crates/memleash-profiles", "crates/memleash-win32"]
 
 [workspace.package]
 version = "0.1.0"

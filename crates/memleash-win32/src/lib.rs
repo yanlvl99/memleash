@@ -10,7 +10,7 @@ pub mod utils;
 pub mod window;
 pub use audio::active_audio_pids;
 pub use discovery::{ProcessInfo, find_by_name};
-pub use error::{Result, SentryError};
+pub use error::{Result, Error};
 pub use memory::{MemoryAvailability, MemoryWatcher, SystemMemory, system_memory};
 pub use process::{
     ProcessId, ProcessMetrics, cap, command_line, empty_working_set, inspect, release,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
-use crate::error::{Result, SentryError};
+use crate::error::{Result, Error};
 use crate::process::ProcessId;
 use crate::utils::wide_to_string;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
@@ -26,7 +26,7 @@ pub struct ProcessInfo {
 
 pub fn find_by_name(exe_name: &str) -> Result<Vec<ProcessInfo>> {
     let handle = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }.map_err(|source| {
-        SentryError::Win32 {
+        Error::Win32 {
             operation: "CreateToolhelp32Snapshot",
             source,
         }
