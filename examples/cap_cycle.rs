@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
-use sentry_src::{AppProfile, AppSnapshot, WindowState, scan};
+use memleash::{AppProfile, AppSnapshot, WindowState, scan};
 
 fn total_ws_mb(snap: &AppSnapshot) -> f64 {
     snap.processes
@@ -10,7 +10,7 @@ fn total_ws_mb(snap: &AppSnapshot) -> f64 {
         .sum()
 }
 
-fn main() -> sentry_src::Result<()> {
+fn main() -> memleash::Result<()> {
     let target = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "Spotify.exe".to_string());

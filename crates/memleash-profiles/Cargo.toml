@@ -1,5 +1,5 @@
 [package]
-name = "sentry-profiles"
+name = "memleash-profiles"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

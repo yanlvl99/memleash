@@ -13,7 +13,7 @@ use windows::Win32::System::Com::{
 };
 use windows::core::Interface;
 
-use crate::error::{Result, SentryError};
+use crate::error::{Result, Error};
 
 struct ComGuard {
     should_uninit: bool,
@@ -31,7 +31,7 @@ impl ComGuard {
                 should_uninit: false,
             })
         } else {
-            Err(SentryError::Win32 {
+            Err(Error::Win32 {
                 operation: "CoInitializeEx",
                 source: hr.into(),
             })
@@ -52,20 +52,20 @@ pub fn active_audio_pids() -> Result<HashSet<u32>> {
 
     let enumerator: IMMDeviceEnumerator =
         unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }.map_err(|source| {
-            SentryError::Win32 {
+            Error::Win32 {
                 operation: "CoCreateInstance(MMDeviceEnumerator)",
                 source,
             }
         })?;
 
     let devices = unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) }.map_err(
-        |source| SentryError::Win32 {
+        |source| Error::Win32 {
             operation: "EnumAudioEndpoints",
             source,
         },
     )?;
 
-    let device_count = unsafe { devices.GetCount() }.map_err(|source| SentryError::Win32 {
+    let device_count = unsafe { devices.GetCount() }.map_err(|source| Error::Win32 {
         operation: "IMMDeviceCollection::GetCount",
         source,
     })?;

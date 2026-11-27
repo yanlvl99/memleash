@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
-use sentry_src::{AppProfile, MemoryWatcher, scan, system_memory};
+use memleash::{AppProfile, MemoryWatcher, scan, system_memory};
 
-fn main() -> sentry_src::Result<()> {
+fn main() -> memleash::Result<()> {
     let mem = system_memory()?;
     let watcher = MemoryWatcher::new()?;
     println!(

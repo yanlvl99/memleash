@@ -19,7 +19,7 @@ use windows::Win32::System::Threading::{
     PROCESS_QUERY_INFORMATION, PROCESS_SET_QUOTA, PROCESS_VM_READ, RTL_USER_PROCESS_PARAMETERS,
 };
 
-use crate::error::{Result, SentryError};
+use crate::error::{Result, Error};
 
 const DEFAULT_MIN_PAGES: usize = 50;
 const DEFAULT_MAX_PAGES: usize = 345;
@@ -51,7 +51,7 @@ impl ProcessId {
 impl ProcessHandle {
     fn open(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> Result<Self> {
         let handle = unsafe { OpenProcess(access, false, pid) }
-            .map_err(|source| SentryError::OpenProcess { pid, source })?;
+            .map_err(|source| Error::OpenProcess { pid, source })?;
         Ok(Self(handle))
     }
 
@@ -62,7 +62,7 @@ impl ProcessHandle {
         let mut user = FILETIME::default();
 
         unsafe { GetProcessTimes(self.0, &mut creation, &mut exit, &mut kernel, &mut user) }
-            .map_err(|source| SentryError::Win32 {
+            .map_err(|source| Error::Win32 {
                 operation: "GetProcessTimes",
                 source,
             })?;
@@ -82,7 +82,7 @@ impl ProcessHandle {
         let handle = Self::open(target.pid, access)?;
         let actual = handle.creation_time()?;
         if actual != target.creation_time {
-            return Err(SentryError::PidReused {
+            return Err(Error::PidReused {
                 pid: target.pid,
                 expected: target.creation_time,
                 actual,
@@ -107,7 +107,7 @@ fn page_size() -> usize {
 pub fn empty_working_set(target: ProcessId) -> Result<()> {
     let handle =
         ProcessHandle::open_verified(target, PROCESS_QUERY_INFORMATION | PROCESS_SET_QUOTA)?;
-    unsafe { EmptyWorkingSet(handle.0) }.map_err(|source| SentryError::Win32 {
+    unsafe { EmptyWorkingSet(handle.0) }.map_err(|source| Error::Win32 {
         operation: "EmptyWorkingSet",
         source,
     })?;
@@ -116,7 +116,7 @@ pub fn empty_working_set(target: ProcessId) -> Result<()> {
 
 pub fn cap(target: ProcessId, max_mb: u32) -> Result<()> {
     if max_mb == 0 {
-        return Err(SentryError::InvalidLimit(max_mb));
+        return Err(Error::InvalidLimit(max_mb));
     }
     let max_bytes = crate::utils::mb_to_bytes(max_mb as usize);
     let min_bytes = (MIN_HARD_CAP_PAGES * page_size()).min(max_bytes);
@@ -130,7 +130,7 @@ pub fn cap(target: ProcessId, max_mb: u32) -> Result<()> {
             QUOTA_LIMITS_HARDWS_MIN_DISABLE | QUOTA_LIMITS_HARDWS_MAX_ENABLE,
         )
     }
-    .map_err(|source| SentryError::Win32 {
+    .map_err(|source| Error::Win32 {
         operation: "SetProcessWorkingSetSizeEx",
         source,
     })?;
@@ -151,7 +151,7 @@ pub fn release(target: ProcessId) -> Result<()> {
             QUOTA_LIMITS_HARDWS_MIN_DISABLE | QUOTA_LIMITS_HARDWS_MAX_DISABLE,
         )
     }
-    .map_err(|source| SentryError::Win32 {
+    .map_err(|source| Error::Win32 {
         operation: "SetProcessWorkingSetSizeEx",
         source,
     })?;
@@ -166,7 +166,7 @@ pub fn inspect(target: ProcessId) -> Result<ProcessMetrics> {
         ..Default::default()
     };
     unsafe { GetProcessMemoryInfo(handle.0, &mut counters, counters.cb) }.map_err(|source| {
-        SentryError::Win32 {
+        Error::Win32 {
             operation: "GetProcessMemoryInfo",
             source,
         }
@@ -193,7 +193,7 @@ fn read_remote_struct<T: Default>(handle: HANDLE, address: *const c_void) -> Res
             None,
         )
     }
-    .map_err(|source| SentryError::Win32 {
+    .map_err(|source| Error::Win32 {
         operation: "ReadProcessMemory",
         source,
     })?;
@@ -214,7 +214,7 @@ pub fn command_line(target: ProcessId) -> Result<String> {
             &raw mut return_len,
         )
     };
-    status.ok().map_err(|source| SentryError::Win32 {
+    status.ok().map_err(|source| Error::Win32 {
         operation: "NtQueryInformationProcess",
         source,
     })?;
@@ -247,7 +247,7 @@ pub fn command_line(target: ProcessId) -> Result<String> {
             None,
         )
     }
-    .map_err(|source| SentryError::Win32 {
+    .map_err(|source| Error::Win32 {
         operation: "ReadProcessMemory",
         source,
     })?;

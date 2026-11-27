@@ -9,7 +9,7 @@ use windows::Win32::System::Memory::{
 use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 use windows::core::BOOL;
 
-use crate::error::{Result, SentryError};
+use crate::error::{Result, Error};
 
 const MIB: u64 = 1024 * 1024;
 
@@ -32,7 +32,7 @@ pub fn system_memory() -> Result<SystemMemory> {
         dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
         ..Default::default()
     };
-    unsafe { GlobalMemoryStatusEx(&mut status) }.map_err(|source| SentryError::Win32 {
+    unsafe { GlobalMemoryStatusEx(&mut status) }.map_err(|source| Error::Win32 {
         operation: "GlobalMemoryStatusEx",
         source,
     })?;
@@ -52,7 +52,7 @@ pub struct MemoryWatcher {
 impl MemoryWatcher {
     pub fn new() -> Result<Self> {
         let low = unsafe { CreateMemoryResourceNotification(LowMemoryResourceNotification) }
-            .map_err(|source| SentryError::Win32 {
+            .map_err(|source| Error::Win32 {
                 operation: "CreateMemoryResourceNotification(Low)",
                 source,
             })?;
@@ -61,7 +61,7 @@ impl MemoryWatcher {
             Ok(handle) => handle,
             Err(source) => {
                 let _ = unsafe { CloseHandle(low) };
-                return Err(SentryError::Win32 {
+                return Err(Error::Win32 {
                     operation: "CreateMemoryResourceNotification(High)",
                     source,
                 });
@@ -73,7 +73,7 @@ impl MemoryWatcher {
     pub fn availability(&self) -> Result<MemoryAvailability> {
         let mut state = BOOL(0);
         unsafe { QueryMemoryResourceNotification(self.low, &mut state) }.map_err(|source| {
-            SentryError::Win32 {
+            Error::Win32 {
                 operation: "QueryMemoryResourceNotification(Low)",
                 source,
             }
@@ -84,7 +84,7 @@ impl MemoryWatcher {
 
         state = BOOL(0);
         unsafe { QueryMemoryResourceNotification(self.high, &mut state) }.map_err(|source| {
-            SentryError::Win32 {
+            Error::Win32 {
                 operation: "QueryMemoryResourceNotification(High)",
                 source,
             }

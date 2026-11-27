@@ -4,7 +4,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum SentryError {
+pub enum Error {
     #[error("failed to open process {pid}: {source}")]
     OpenProcess {
         pid: u32,
@@ -30,4 +30,4 @@ pub enum SentryError {
     },
 }
 
-pub type Result<T> = std::result::Result<T, SentryError>;
+pub type Result<T> = std::result::Result<T, Error>;
