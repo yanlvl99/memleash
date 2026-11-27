@@ -28,6 +28,13 @@ pub struct ScannedProcess {
     pub is_audio: bool,
 }
 
+#[derive(Debug, Default)]
+pub struct ActionReport {
+    pub succeeded: usize,
+    pub skipped: usize,
+    pub failures: Vec<(u32, SentryError)>,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppSnapshot {
     pub exe_name: String,
@@ -35,6 +42,50 @@ pub struct AppSnapshot {
     pub window: Option<WindowCandidate>,
     pub active_audio_pids: HashSet<u32>,
     pub processes: Vec<ScannedProcess>,
+}
+
+impl ActionReport {
+    pub fn is_ok(&self) -> bool {
+        self.failures.is_empty()
+    }
+}
+
+impl AppSnapshot {
+    fn run_for_managed<F>(&self, mut action: F) -> ActionReport
+    where
+        F: FnMut(&ScannedProcess) -> Result<()>,
+    {
+        let mut report = ActionReport::default();
+        for proc in &self.processes {
+            if !proc.config.managed {
+                report.skipped += 1;
+                continue;
+            }
+            match action(proc) {
+                Ok(()) => report.succeeded += 1,
+                Err(err) => report.failures.push((proc.info.id.pid, err)),
+            }
+        }
+        report
+    }
+
+    pub fn cap_all(&self, trim: bool) -> ActionReport {
+        self.run_for_managed(|proc| {
+            cap(proc.info.id, proc.config.initial_mb)?;
+            if trim {
+                empty_working_set(proc.info.id)?;
+            }
+            Ok(())
+        })
+    }
+
+    pub fn empty_all(&self) -> ActionReport {
+        self.run_for_managed(|proc| empty_working_set(proc.info.id))
+    }
+
+    pub fn release_all(&self) -> ActionReport {
+        self.run_for_managed(|proc| release(proc.info.id))
+    }
 }
 
 pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
