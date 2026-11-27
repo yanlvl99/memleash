@@ -118,12 +118,7 @@ pub struct AppProfileBuilder {
 }
 
 impl AppProfileBuilder {
-    pub fn role(
-        mut self,
-        name: impl Into<String>,
-        rule: MatchRule,
-        config: RoleConfig,
-    ) -> Self {
+    pub fn role(mut self, name: impl Into<String>, rule: MatchRule, config: RoleConfig) -> Self {
         self.roles.push(RoleDefinition {
             name: name.into(),
             rule,
@@ -181,7 +176,11 @@ mod tests {
         assert_eq!(audio.identity, "Audio");
         assert_eq!(audio.config.min_mb, 25);
 
-        let renderer = profile.classify("app.exe --type=renderer --renderer-client-id=6", false, false);
+        let renderer = profile.classify(
+            "app.exe --type=renderer --renderer-client-id=6",
+            false,
+            false,
+        );
         assert_eq!(renderer.role, "Renderer");
         assert_eq!(renderer.sub_label.as_deref(), Some("#6"));
         assert_eq!(renderer.identity, "Renderer:#6");
