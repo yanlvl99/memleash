@@ -164,3 +164,52 @@ impl AppProfileBuilder {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chromium_preset_classification() {
+        let profile = AppProfile::chromium("app.exe");
+
+        let main = profile.classify("app.exe", true, false);
+        assert_eq!(main.identity, "Main");
+        assert_eq!(main.config.max_mb, 38);
+
+        let audio = profile.classify("app.exe --type=renderer", true, true);
+        assert_eq!(audio.identity, "Audio");
+        assert_eq!(audio.config.min_mb, 25);
+
+        let renderer = profile.classify("app.exe --type=renderer --renderer-client-id=6", false, false);
+        assert_eq!(renderer.role, "Renderer");
+        assert_eq!(renderer.sub_label.as_deref(), Some("#6"));
+        assert_eq!(renderer.identity, "Renderer:#6");
+
+        let utility = profile.classify(
+            "app.exe --type=utility --utility-sub-type=network.mojom.NetworkService",
+            false,
+            false,
+        );
+        assert_eq!(utility.identity, "Utility:network");
+
+        let gpu = profile.classify("app.exe --type=gpu-process", false, false);
+        assert_eq!(gpu.identity, "GPU");
+
+        let crashpad = profile.classify("app.exe --type=crashpad-handler", false, false);
+        assert_eq!(crashpad.identity, "Crashpad");
+
+        let fallback = profile.classify("app.exe --something-else", false, false);
+        assert_eq!(fallback.identity, "Helper");
+    }
+
+    #[test]
+    fn single_preset_and_unmanaged_role() {
+        let cfg = RoleConfig::new(8, 64).with_initial_mb(32).unmanaged();
+        let profile = AppProfile::single("game.exe", cfg);
+        let class = profile.classify("game.exe", true, false);
+        assert_eq!(class.identity, "Main");
+        assert_eq!(class.config.initial_mb, 32);
+        assert!(!class.config.managed);
+    }
+}
