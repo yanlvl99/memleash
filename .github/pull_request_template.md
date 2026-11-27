@@ -12,8 +12,8 @@
 
 ## Checklist
 - [ ] Formatted (`cargo fmt --all`)
-- [ ] Code compiles cleanly (`cargo check`)
-- [ ] Tests pass (`cargo test`)
-- [ ] No new warnings (`cargo clippy`)
+- [ ] Code compiles cleanly (`cargo check --workspace`)
+- [ ] Tests pass (`cargo test --workspace`)
+- [ ] No new warnings (`cargo clippy --workspace`)
 
 <!-- Link related issues using: Closes #123 -->
