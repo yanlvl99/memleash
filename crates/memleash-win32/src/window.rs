@@ -77,9 +77,10 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
     }
 
     if let Ok(owner) = unsafe { GetWindow(hwnd, GW_OWNER) }
-        && !owner.0.is_null() {
-            return BOOL(1);
-        }
+        && !owner.0.is_null()
+    {
+        return BOOL(1);
+    }
 
     let ex_style = unsafe { GetWindowLongW(hwnd, GWL_EXSTYLE) } as u32;
     if ex_style & (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) != 0 {
@@ -131,12 +132,7 @@ pub fn find_windows(pids: &[u32]) -> Vec<WindowCandidate> {
         pids,
         found: Vec::new(),
     };
-    let _ = unsafe {
-        EnumWindows(
-            Some(enum_window_callback),
-            LPARAM((&raw mut scan) as isize),
-        )
-    };
+    let _ = unsafe { EnumWindows(Some(enum_window_callback), LPARAM((&raw mut scan) as isize)) };
     scan.found
 }
 
@@ -174,4 +170,44 @@ pub fn window_state(pids: &[u32]) -> (WindowState, Option<WindowCandidate>) {
     let candidates = find_windows(pids);
     let (state, rep) = classify_windows(&candidates, is_foreground);
     (state, rep.cloned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn win(hwnd: usize, on_screen: bool, iconic: bool, area: i64) -> WindowCandidate {
+        WindowCandidate {
+            pid: 1,
+            hwnd,
+            title: "App".to_string(),
+            on_screen,
+            iconic,
+            area,
+        }
+    }
+
+    #[test]
+    fn classify_windows_covers_all_states() {
+        assert_eq!(classify_windows(&[], false), (WindowState::NotFound, None));
+
+        let visible = [win(1, false, false, 0), win(2, true, false, 800_000)];
+        let (state, rep) = classify_windows(&visible, true);
+        assert_eq!(state, WindowState::Foreground);
+        assert_eq!(rep.map(|w| w.hwnd), Some(2));
+
+        let (state, rep) = classify_windows(&visible, false);
+        assert_eq!(state, WindowState::BackgroundVisible);
+        assert_eq!(rep.map(|w| w.hwnd), Some(2));
+
+        let minimized = [win(3, true, true, 0)];
+        assert_eq!(
+            classify_windows(&minimized, false).0,
+            WindowState::Minimized
+        );
+
+        // Tray-hidden windows can keep WS_MINIMIZE while on_screen is false.
+        let tray_hidden = [win(4, false, true, 0)];
+        assert_eq!(classify_windows(&tray_hidden, false).0, WindowState::Hidden);
+    }
 }

@@ -13,7 +13,7 @@ use windows::Win32::System::Com::{
 };
 use windows::core::Interface;
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 struct ComGuard {
     should_uninit: bool,
@@ -50,13 +50,13 @@ impl Drop for ComGuard {
 pub fn active_audio_pids() -> Result<HashSet<u32>> {
     let _com = ComGuard::init()?;
 
-    let enumerator: IMMDeviceEnumerator =
-        unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }.map_err(|source| {
-            Error::Win32 {
-                operation: "CoCreateInstance(MMDeviceEnumerator)",
-                source,
-            }
-        })?;
+    let enumerator: IMMDeviceEnumerator = unsafe {
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+    }
+    .map_err(|source| Error::Win32 {
+        operation: "CoCreateInstance(MMDeviceEnumerator)",
+        source,
+    })?;
 
     let devices = unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) }.map_err(
         |source| Error::Win32 {
@@ -101,9 +101,10 @@ pub fn active_audio_pids() -> Result<HashSet<u32>> {
                 continue;
             };
             if let Ok(pid) = unsafe { control2.GetProcessId() }
-                && pid != 0 {
-                    pids.insert(pid);
-                }
+                && pid != 0
+            {
+                pids.insert(pid);
+            }
         }
     }
 

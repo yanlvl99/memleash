@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 use crate::process::ProcessId;
 use crate::utils::wide_to_string;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
@@ -46,13 +46,14 @@ pub fn find_by_name(exe_name: &str) -> Result<Vec<ProcessInfo>> {
     loop {
         let name = wide_to_string(&entry.szExeFile);
         if name.eq_ignore_ascii_case(exe_name)
-            && let Ok(id) = ProcessId::from_pid(entry.th32ProcessID) {
-                results.push(ProcessInfo {
-                    id,
-                    parent_pid: entry.th32ParentProcessID,
-                    exe_name: name,
-                });
-            }
+            && let Ok(id) = ProcessId::from_pid(entry.th32ProcessID)
+        {
+            results.push(ProcessInfo {
+                id,
+                parent_pid: entry.th32ParentProcessID,
+                exe_name: name,
+            });
+        }
         if unsafe { Process32NextW(snapshot.0, &mut entry) }.is_err() {
             break;
         }

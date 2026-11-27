@@ -101,3 +101,40 @@ fn extract_flag_value(cmd: &str, flag: &str) -> Option<String> {
     let token = token.trim_matches('"');
     (!token.is_empty()).then(|| token.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn match_rules() {
+        let renderer = MatchRule::cmd_contains("--type=renderer");
+        assert!(renderer.matches("app.exe --TYPE=Renderer --extra", false, false));
+        assert!(!renderer.matches("app.exe --type=gpu-process", false, false));
+        assert!(MatchRule::IsRoot.matches("app.exe", true, false));
+        assert!(!MatchRule::IsRoot.matches("app.exe", false, false));
+        assert!(MatchRule::IsAudio.matches("app.exe", false, true));
+        assert!(MatchRule::Any.matches("", false, false));
+    }
+
+    #[test]
+    fn sub_label_extraction() {
+        let renderer = SubLabelRule::flag_value("--renderer-client-id", "#");
+        assert_eq!(
+            renderer.extract("app.exe --type=renderer --renderer-client-id=6"),
+            Some("#6".to_string())
+        );
+        assert_eq!(
+            renderer.extract("app.exe --renderer-client-id 12"),
+            Some("#12".to_string())
+        );
+        assert_eq!(renderer.extract("app.exe --type=renderer"), None);
+
+        let utility = SubLabelRule::flag_head("--utility-sub-type", '.');
+        assert_eq!(
+            utility.extract("app.exe --utility-sub-type=network.mojom.NetworkService"),
+            Some("network".to_string())
+        );
+        assert_eq!(utility.extract("app.exe --type=utility"), None);
+    }
+}

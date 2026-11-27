@@ -19,7 +19,7 @@ use windows::Win32::System::Threading::{
     PROCESS_QUERY_INFORMATION, PROCESS_SET_QUOTA, PROCESS_VM_READ, RTL_USER_PROCESS_PARAMETERS,
 };
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 const DEFAULT_MIN_PAGES: usize = 50;
 const DEFAULT_MAX_PAGES: usize = 345;
@@ -253,4 +253,49 @@ pub fn command_line(target: ProcessId) -> Result<String> {
     })?;
 
     Ok(String::from_utf16_lossy(&buffer))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_zero_limit_and_reused_pid() {
+        let me = ProcessId::from_pid(std::process::id()).expect("open current process");
+        assert!(matches!(cap(me, 0), Err(Error::InvalidLimit(0))));
+
+        let stale = ProcessId {
+            pid: me.pid,
+            creation_time: 0,
+        };
+        assert!(matches!(release(stale), Err(Error::PidReused { .. })));
+    }
+
+    #[test]
+    fn inspect_and_command_line_read_current_process() {
+        let me = ProcessId::from_pid(std::process::id()).expect("open current process");
+        let metrics = inspect(me).expect("inspect current process");
+        assert!(metrics.working_set_mb > 0.0);
+
+        let cmd = command_line(me).expect("read current command line");
+        assert!(!cmd.is_empty());
+    }
+
+    #[test]
+    fn cap_trim_and_release_cycle_on_current_process() {
+        let me = ProcessId::from_pid(std::process::id()).expect("open current process");
+        let buf = vec![1u8; crate::utils::mb_to_bytes(32)];
+
+        let before = working_set_mb(me).expect("ws before");
+        cap(me, 8).expect("cap");
+        empty_working_set(me).expect("empty_working_set");
+        let after = working_set_mb(me).expect("ws after");
+        release(me).expect("release");
+
+        drop(buf);
+        assert!(
+            after < before,
+            "expected WS to drop: before={before:.2} MB, after={after:.2} MB"
+        );
+    }
 }

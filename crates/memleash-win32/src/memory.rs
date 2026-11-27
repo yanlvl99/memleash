@@ -9,7 +9,7 @@ use windows::Win32::System::Memory::{
 use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 use windows::core::BOOL;
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 const MIB: u64 = 1024 * 1024;
 
@@ -101,5 +101,21 @@ impl Drop for MemoryWatcher {
     fn drop(&mut self) {
         let _ = unsafe { CloseHandle(self.low) };
         let _ = unsafe { CloseHandle(self.high) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_memory_and_watcher_return_valid_values() {
+        let mem = system_memory().expect("system_memory");
+        assert!(mem.total_mb > 0);
+        assert!(mem.available_mb <= mem.total_mb);
+        assert!(mem.load_percent <= 100);
+
+        let watcher = MemoryWatcher::new().expect("MemoryWatcher::new");
+        let _ = watcher.availability().expect("availability");
     }
 }
