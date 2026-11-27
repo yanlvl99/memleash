@@ -30,7 +30,10 @@ fn main() -> memleash::Result<()> {
         snap.processes.len(),
         snap.exe_name,
         snap.window_state,
-        snap.window.as_ref().map(|w| w.title.as_str()).unwrap_or("none"),
+        snap.window
+            .as_ref()
+            .map(|w| w.title.as_str())
+            .unwrap_or("none"),
         snap.active_audio_pids
     );
 
