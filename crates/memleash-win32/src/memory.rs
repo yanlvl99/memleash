@@ -103,3 +103,19 @@ impl Drop for MemoryWatcher {
         let _ = unsafe { CloseHandle(self.high) };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_memory_and_watcher_return_valid_values() {
+        let mem = system_memory().expect("system_memory");
+        assert!(mem.total_mb > 0);
+        assert!(mem.available_mb <= mem.total_mb);
+        assert!(mem.load_percent <= 100);
+
+        let watcher = MemoryWatcher::new().expect("MemoryWatcher::new");
+        let _ = watcher.availability().expect("availability");
+    }
+}
