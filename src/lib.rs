@@ -28,6 +28,13 @@ pub struct ScannedProcess {
     pub is_audio: bool,
 }
 
+#[derive(Debug, Default)]
+pub struct ActionReport {
+    pub sucess: usize,
+    pub skipped: usize,
+    pub failures: Vec<(u32, SentryError)>,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppSnapshot {
     pub exe_name: String,
@@ -35,6 +42,12 @@ pub struct AppSnapshot {
     pub window: Option<WindowCandidate>,
     pub active_audio_pids: HashSet<u32>,
     pub processes: Vec<ScannedProcess>,
+}
+
+impl ActionReport {
+    pub fn is_ok(&self) -> bool {
+        self.failures.is_empty()
+    }
 }
 
 pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
