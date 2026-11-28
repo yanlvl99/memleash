@@ -15,5 +15,6 @@
 - [ ] Code compiles cleanly (`cargo check --workspace`)
 - [ ] Tests pass (`cargo test --workspace`)
 - [ ] No new warnings (`cargo clippy --workspace`)
+- [ ] Docs build cleanly (`cargo doc --workspace --no-deps`)
 
 <!-- Link related issues using: Closes #123 -->
