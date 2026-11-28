@@ -211,4 +211,33 @@ mod tests {
         assert_eq!(class.config.initial_mb, 32);
         assert!(!class.config.managed);
     }
+
+    #[test]
+    fn chromium_audio_service_flag_and_custom_builder() {
+        let chromium = AppProfile::chromium("app.exe");
+        let audio = chromium.classify(
+            "app.exe --type=utility --utility-sub-type=audio.mojom.AudioService",
+            false,
+            false,
+        );
+        assert_eq!(audio.identity, "Audio");
+        assert_eq!(audio.config.min_mb, 25);
+
+        let custom = AppProfile::builder("custom.exe")
+            .role(
+                "Worker",
+                MatchRule::cmd_contains("--worker"),
+                RoleConfig::new(8, 32),
+            )
+            .fallback("Idle", RoleConfig::new(4, 16))
+            .build();
+        assert_eq!(custom.exe_name(), "custom.exe");
+        assert_eq!(
+            custom
+                .classify("custom.exe --worker", false, false)
+                .identity,
+            "Worker"
+        );
+        assert_eq!(custom.classify("custom.exe", false, false).identity, "Idle");
+    }
 }

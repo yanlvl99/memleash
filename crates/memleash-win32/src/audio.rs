@@ -110,3 +110,14 @@ pub fn active_audio_pids() -> Result<HashSet<u32>> {
 
     Ok(pids)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_audio_pids_returns_ok_without_zero_pid() {
+        let pids = active_audio_pids().expect("active_audio_pids");
+        assert!(!pids.contains(&0));
+    }
+}

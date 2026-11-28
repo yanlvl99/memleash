@@ -155,4 +155,33 @@ mod tests {
         );
         assert_eq!(utility.extract("app.exe --type=utility"), None);
     }
+
+    #[test]
+    fn role_config_try_new_validates_bounds() {
+        assert_eq!(RoleConfig::try_new(0, 10), None);
+        assert_eq!(RoleConfig::try_new(20, 10), None);
+        let cfg = RoleConfig::try_new(4, 32).expect("valid bounds");
+        assert_eq!(cfg.min_mb, 4);
+        assert_eq!(cfg.max_mb, 32);
+        assert_eq!(cfg.initial_mb, 32);
+        assert!(cfg.managed);
+    }
+
+    #[test]
+    #[should_panic(expected = "min_mb must be at least 1")]
+    fn role_config_new_panics_on_zero_min() {
+        let _ = RoleConfig::new(0, 10);
+    }
+
+    #[test]
+    #[should_panic(expected = "max_mb must be greater or equal min_mb")]
+    fn role_config_new_panics_on_min_greater_that_max() {
+        let _ = RoleConfig::new(10, 7);
+    }
+
+    #[test]
+    #[should_panic(expected = "initial_mb must be within min_mb..=max_mb")]
+    fn role_config_with_initial_out_of_range_panics() {
+        let _ = RoleConfig::new(8, 32).with_initial_mb(64);
+    }
 }
