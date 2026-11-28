@@ -47,6 +47,13 @@ impl Drop for ComGuard {
     }
 }
 
+/// Returns the PIDs currently owning an `AudioSessionStateActive`
+/// [WASAPI](https://learn.microsoft.com/en-us/windows/win32/coreaudio/wasapi) render session.
+///
+/// # Errors
+///
+/// Returns [`Error::Win32`] if COM initialization, `MMDeviceEnumerator` creation,
+/// or endpoint enumeration fails.
 pub fn active_audio_pids() -> Result<HashSet<u32>> {
     let _com = ComGuard::init()?;
 
