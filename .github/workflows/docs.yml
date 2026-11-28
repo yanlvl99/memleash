@@ -1,0 +1,65 @@
+name: Docs
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTDOCFLAGS: -D warnings
+
+jobs:
+  build:
+    name: Build Rustdoc (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build documentation
+        run: cargo doc --workspace --no-deps --locked
+
+      - name: Add root redirect
+        shell: pwsh
+        run: |
+          Set-Content -Path target/doc/index.html -Value '<meta http-equiv="refresh" content="0; url=memleash/index.html">'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustdoc
+          path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rustdoc
+          path: site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
