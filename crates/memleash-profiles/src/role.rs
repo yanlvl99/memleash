@@ -21,6 +21,18 @@ impl RoleConfig {
         }
     }
 
+    pub const fn try_new(min_mb: u32, max_mb: u32) -> Option<Self> {
+        if min_mb == 0 || max_mb < min_mb {
+            return None;
+        }
+        Some(Self {
+            min_mb,
+            max_mb,
+            initial_mb: max_mb,
+            managed: true,
+        })
+    }
+
     pub const fn with_initial_mb(mut self, initial_mb: u32) -> Self {
         assert!(
             initial_mb >= self.min_mb && initial_mb <= self.max_mb,
