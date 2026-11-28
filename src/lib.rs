@@ -19,6 +19,7 @@ pub use memleash_win32::{
 #[derive(Debug, Clone)]
 pub struct ScannedProcess {
     pub info: ProcessInfo,
+    pub command_line: Option<String>,
     pub role: String,
     pub sub_label: Option<String>,
     pub identity: String,
@@ -28,6 +29,7 @@ pub struct ScannedProcess {
     pub is_audio: bool,
 }
 
+#[must_use = "batch actions may have per-process failures; inspect the report"]
 #[derive(Debug, Default)]
 pub struct ActionReport {
     pub succeeded: usize,
@@ -41,6 +43,7 @@ pub struct AppSnapshot {
     pub window_state: WindowState,
     pub window: Option<WindowCandidate>,
     pub active_audio_pids: HashSet<u32>,
+    pub audio_available: bool,
     pub processes: Vec<ScannedProcess>,
 }
 
@@ -90,7 +93,10 @@ impl AppSnapshot {
 
 pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
     let raw_processes = find_by_name(profile.exe_name())?;
-    let audio_pids = active_audio_pids().unwrap_or_default();
+    let (audio_pids, audio_available) = match active_audio_pids() {
+        Ok(pids) => (pids, true),
+        Err(_) => (HashSet::new(), false),
+    };
     let fg = foreground_pid();
 
     let pid_list: Vec<u32> = raw_processes.iter().map(|p| p.id.pid).collect();
@@ -102,12 +108,13 @@ pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
         let is_root = !pid_set.contains(&info.parent_pid);
         let is_audio = audio_pids.contains(&info.id.pid);
         let is_foreground = fg == Some(info.id.pid);
-        let cmd = command_line(info.id).unwrap_or_default();
-        let class = profile.classify(&cmd, is_root, is_audio);
+        let cmd = command_line(info.id).ok();
+        let class = profile.classify(cmd.as_deref().unwrap_or(""), is_root, is_audio);
         let metrics = inspect(info.id).ok();
 
         processes.push(ScannedProcess {
             info,
+            command_line: cmd,
             role: class.role.to_string(),
             sub_label: class.sub_label,
             identity: class.identity,
@@ -123,6 +130,7 @@ pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
         window_state: win_state,
         window: main_window,
         active_audio_pids: audio_pids,
+        audio_available,
         processes,
     })
 }
