@@ -11,6 +11,8 @@ pub struct RoleConfig {
 
 impl RoleConfig {
     pub const fn new(min_mb: u32, max_mb: u32) -> Self {
+        assert!(min_mb >= 1, "min_mb must be at least 1");
+        assert!(max_mb >= min_mb, "max_mb must be greater or equal min_mb");
         Self {
             min_mb,
             max_mb,
@@ -19,7 +21,23 @@ impl RoleConfig {
         }
     }
 
+    pub const fn try_new(min_mb: u32, max_mb: u32) -> Option<Self> {
+        if min_mb == 0 || max_mb < min_mb {
+            return None;
+        }
+        Some(Self {
+            min_mb,
+            max_mb,
+            initial_mb: max_mb,
+            managed: true,
+        })
+    }
+
     pub const fn with_initial_mb(mut self, initial_mb: u32) -> Self {
+        assert!(
+            initial_mb >= self.min_mb && initial_mb <= self.max_mb,
+            "initial_mb must be within min_mb..=max_mb"
+        );
         self.initial_mb = initial_mb;
         self
     }
