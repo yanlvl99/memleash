@@ -11,14 +11,20 @@ struct RoleDefinition {
     config: RoleConfig,
 }
 
+/// Result of classifying a process against an [`AppProfile`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Classification<'a> {
+    /// Matched role name (e.g. `"Main"`, `"Renderer"`, `"Utility"`).
     pub role: &'a str,
+    /// Optional sub-label extracted from the command line (e.g. `"#6"`, `"network"`).
     pub sub_label: Option<String>,
+    /// Stable PID-free key: `"{role}:{sub_label}"` when a sub-label is present, otherwise `role`.
     pub identity: String,
+    /// Limits and management policy for the matched role.
     pub config: &'a RoleConfig,
 }
 
+/// Ordered set of rules describing how to classify a target executable's processes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppProfile {
     exe_name: String,
@@ -28,6 +34,7 @@ pub struct AppProfile {
 }
 
 impl AppProfile {
+    /// Starts building a custom profile for `exe_name` (e.g. `"Chrome.exe"`).
     pub fn builder(exe_name: impl Into<String>) -> AppProfileBuilder {
         AppProfileBuilder {
             exe_name: exe_name.into(),
@@ -37,6 +44,7 @@ impl AppProfile {
         }
     }
 
+    /// Profile for a single-process application where every process maps to `"Main"`.
     pub fn single(exe_name: impl Into<String>, config: RoleConfig) -> Self {
         Self::builder(exe_name)
             .role("Main", MatchRule::IsRoot, config)
@@ -44,6 +52,11 @@ impl AppProfile {
             .build()
     }
 
+    /// Preset for Chromium, Electron, and CEF applications (Chrome, Edge, Discord, Spotify, VS Code).
+    ///
+    /// Rules are evaluated in order: active audio (`Audio`), `audio.mojom.audioservice` (`Audio`),
+    /// root process (`Main`), `--type=renderer` (`Renderer:#<id>`), `--type=gpu-process` (`GPU`),
+    /// `--type=utility` (`Utility:<service>`), `crashpad` (`Crashpad`), and fallback (`Helper`).
     pub fn chromium(exe_name: impl Into<String>) -> Self {
         Self::builder(exe_name)
             .role("Audio", MatchRule::IsAudio, RoleConfig::new(25, 60))
@@ -79,10 +92,14 @@ impl AppProfile {
             .build()
     }
 
+    /// Target executable file name (e.g. `"Chrome.exe"`).
     pub fn exe_name(&self) -> &str {
         &self.exe_name
     }
 
+    /// Classifies a process against the profile's rules in registration order.
+    ///
+    /// Returns the first matching rule, or the fallback role if none match.
     pub fn classify(&self, cmd: &str, is_root: bool, is_audio: bool) -> Classification<'_> {
         for def in &self.roles {
             if def.rule.matches(cmd, is_root, is_audio) {
@@ -109,6 +126,7 @@ impl AppProfile {
     }
 }
 
+/// Builder for constructing an [`AppProfile`] with custom role rules.
 #[derive(Debug, Clone)]
 pub struct AppProfileBuilder {
     exe_name: String,
@@ -118,6 +136,7 @@ pub struct AppProfileBuilder {
 }
 
 impl AppProfileBuilder {
+    /// Appends a role rule. Earlier rules take precedence during [`AppProfile::classify`].
     pub fn role(mut self, name: impl Into<String>, rule: MatchRule, config: RoleConfig) -> Self {
         self.roles.push(RoleDefinition {
             name: name.into(),
@@ -128,6 +147,7 @@ impl AppProfileBuilder {
         self
     }
 
+    /// Appends a role rule that also extracts a sub-label via `sub_label`.
     pub fn role_with_sub(
         mut self,
         name: impl Into<String>,
@@ -144,12 +164,14 @@ impl AppProfileBuilder {
         self
     }
 
+    /// Sets the fallback role used when no rule matches (defaults to `"Helper"` with `4..=48` MB).
     pub fn fallback(mut self, name: impl Into<String>, config: RoleConfig) -> Self {
         self.fallback_name = name.into();
         self.fallback_config = config;
         self
     }
 
+    /// Finishes building the [`AppProfile`].
     pub fn build(self) -> AppProfile {
         AppProfile {
             exe_name: self.exe_name,
