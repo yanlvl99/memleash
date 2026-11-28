@@ -17,13 +17,24 @@ impl Drop for SnapshotHandle {
     }
 }
 
+/// Basic metadata for a running process returned by [`find_by_name`].
 #[derive(Debug, Clone)]
 pub struct ProcessInfo {
+    /// Verified process identifier (PID + creation timestamp).
     pub id: ProcessId,
+    /// Parent process ID reported by ToolHelp.
     pub parent_pid: u32,
+    /// Executable file name (without directory path).
     pub exe_name: String,
 }
 
+/// Enumerates running processes whose executable file name matches `exe_name` (ASCII case-insensitive).
+///
+/// Processes that exit or deny `PROCESS_QUERY_INFORMATION` during enumeration are skipped.
+///
+/// # Errors
+///
+/// Returns [`Error::Win32`] if `CreateToolhelp32Snapshot` fails.
 pub fn find_by_name(exe_name: &str) -> Result<Vec<ProcessInfo>> {
     let handle = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }.map_err(|source| {
         Error::Win32 {
