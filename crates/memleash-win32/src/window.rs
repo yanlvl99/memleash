@@ -12,25 +12,40 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::BOOL;
 
+/// Resolved visibility state of an application's top-level windows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowState {
+    /// One of the application's processes owns the current foreground window.
     Foreground,
+    /// At least one non-minimized, non-cloaked window is visible behind other windows.
     BackgroundVisible,
+    /// A visible window is minimized on the taskbar (`IsIconic`).
     Minimized,
+    /// Windows exist for the process, but none are visible on screen (for example, hidden to tray or cloaked).
     Hidden,
+    /// No matching top-level windows were found.
     NotFound,
 }
 
+/// Top-level titled window discovered by [`find_windows`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WindowCandidate {
+    /// Owning process ID.
     pub pid: u32,
+    /// Raw `HWND` value.
     pub hwnd: usize,
+    /// Window title text.
     pub title: String,
+    /// `true` when `IsWindowVisible` is true and
+    /// [`DWMWA_CLOAKED`](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute) is `0`.
     pub on_screen: bool,
+    /// `true` when `IsIconic` is true.
     pub iconic: bool,
+    /// Bounding rectangle area (`width * height`) in pixels.
     pub area: i64,
 }
 
+/// Returns the PID owning the current foreground window, if any.
 pub fn foreground_pid() -> Option<u32> {
     let hwnd = unsafe { GetForegroundWindow() };
     if hwnd.0.is_null() {
@@ -124,6 +139,9 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
     BOOL(1)
 }
 
+/// Enumerates unowned, titled top-level windows belonging to any PID in `pids`.
+///
+/// Filters out owned dialogs and windows with `WS_EX_TOOLWINDOW` or `WS_EX_NOACTIVATE`.
 pub fn find_windows(pids: &[u32]) -> Vec<WindowCandidate> {
     if pids.is_empty() {
         return Vec::new();
@@ -136,6 +154,10 @@ pub fn find_windows(pids: &[u32]) -> Vec<WindowCandidate> {
     scan.found
 }
 
+/// Derives a [`WindowState`] and representative window from `candidates` and `is_foreground`.
+///
+/// `Minimized` requires `on_screen && iconic` so tray-hidden windows that retain `WS_MINIMIZE`
+/// classify as [`WindowState::Hidden`].
 pub fn classify_windows(
     candidates: &[WindowCandidate],
     is_foreground: bool,
@@ -165,6 +187,8 @@ pub fn classify_windows(
     (WindowState::NotFound, None)
 }
 
+/// Checks foreground ownership and enumerates `pids` to return the live [`WindowState`]
+/// and its representative [`WindowCandidate`].
 pub fn window_state(pids: &[u32]) -> (WindowState, Option<WindowCandidate>) {
     let is_foreground = foreground_pid().is_some_and(|fg| pids.contains(&fg));
     let candidates = find_windows(pids);

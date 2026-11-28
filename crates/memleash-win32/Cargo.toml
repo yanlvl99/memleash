@@ -3,6 +3,8 @@ name = "memleash-win32"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Win32 process, working-set, window-state, and WASAPI primitives for memleash"
 
 [dependencies]
 thiserror.workspace = true

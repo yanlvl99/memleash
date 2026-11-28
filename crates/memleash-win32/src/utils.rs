@@ -3,14 +3,18 @@
 
 use windows::Win32::Foundation::FILETIME;
 
+/// Converts megabytes (MiB) to bytes, saturating on overflow.
 pub const fn mb_to_bytes(mb: usize) -> usize {
     mb.saturating_mul(1024 * 1024)
 }
 
+/// Packs a Win32 [`FILETIME`](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+/// into a single 64-bit count of 100-nanosecond intervals.
 pub const fn filetime_to_u64(ft: FILETIME) -> u64 {
     ((ft.dwHighDateTime as u64) << 32) | ft.dwLowDateTime as u64
 }
 
+/// Decodes a NUL-terminated UTF-16 slice into a `String`, stopping at the first `0`.
 pub fn wide_to_string(buf: &[u16]) -> String {
     let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
     String::from_utf16_lossy(&buf[..len])

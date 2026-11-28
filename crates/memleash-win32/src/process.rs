@@ -27,20 +27,34 @@ const MIN_HARD_CAP_PAGES: usize = 20;
 
 struct ProcessHandle(HANDLE);
 
+/// Process ID paired with its kernel creation timestamp to guard against PID reuse.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ProcessId {
+    /// Windows process ID.
     pub pid: u32,
+    /// Creation timestamp from [`GetProcessTimes`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes)
+    /// as a [`FILETIME`](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+    /// (100-nanosecond intervals since 1601-01-01 UTC).
     pub creation_time: u64,
 }
 
+/// Point-in-time memory and CPU counters returned by [`inspect`].
 #[derive(Debug, Clone, Copy)]
 pub struct ProcessMetrics {
+    /// Current working-set size in MiB.
     pub working_set_mb: f64,
+    /// Cumulative page-fault count reported by `GetProcessMemoryInfo`.
     pub page_fault_count: u64,
+    /// Cumulative kernel + user CPU time in milliseconds.
     pub cpu_time_ms: f64,
 }
 
 impl ProcessId {
+    /// Opens `pid` with `PROCESS_QUERY_INFORMATION` and captures its creation timestamp.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OpenProcess`] if the process cannot be opened, or [`Error::Win32`] if `GetProcessTimes` fails.
     pub fn from_pid(pid: u32) -> Result<Self> {
         let handle = ProcessHandle::open(pid, PROCESS_QUERY_INFORMATION)?;
         let creation_time = handle.creation_time()?;
@@ -104,6 +118,12 @@ fn page_size() -> usize {
     (info.dwPageSize as usize).max(4096)
 }
 
+/// Trims as many pages as possible from `target`'s working set via
+/// [`EmptyWorkingSet`](https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-emptyworkingset).
+///
+/// # Errors
+///
+/// Returns [`Error::OpenProcess`], [`Error::PidReused`], or [`Error::Win32`].
 pub fn empty_working_set(target: ProcessId) -> Result<()> {
     let handle =
         ProcessHandle::open_verified(target, PROCESS_QUERY_INFORMATION | PROCESS_SET_QUOTA)?;
@@ -114,6 +134,13 @@ pub fn empty_working_set(target: ProcessId) -> Result<()> {
     Ok(())
 }
 
+/// Applies a hard maximum working-set limit of `max_mb` MiB (`QUOTA_LIMITS_HARDWS_MAX_ENABLE`)
+/// via [`SetProcessWorkingSetSizeEx`](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-setprocessworkingsetsizeex).
+///
+/// # Errors
+///
+/// Returns [`Error::InvalidLimit`] if `max_mb == 0`, or [`Error::OpenProcess`],
+/// [`Error::PidReused`], or [`Error::Win32`] on OS failure.
 pub fn cap(target: ProcessId, max_mb: u32) -> Result<()> {
     if max_mb == 0 {
         return Err(Error::InvalidLimit(max_mb));
@@ -137,6 +164,12 @@ pub fn cap(target: ProcessId, max_mb: u32) -> Result<()> {
     Ok(())
 }
 
+/// Restores `target` to Windows default soft working-set limits (50 / 345 pages, hard max disabled)
+/// per [`SetProcessWorkingSetSizeEx`](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-setprocessworkingsetsizeex).
+///
+/// # Errors
+///
+/// Returns [`Error::OpenProcess`], [`Error::PidReused`], or [`Error::Win32`].
 pub fn release(target: ProcessId) -> Result<()> {
     let page = page_size();
     let min_bytes = DEFAULT_MIN_PAGES * page;
@@ -158,6 +191,11 @@ pub fn release(target: ProcessId) -> Result<()> {
     Ok(())
 }
 
+/// Reads working-set size, page faults, and cumulative CPU time in a single handle open.
+///
+/// # Errors
+///
+/// Returns [`Error::OpenProcess`], [`Error::PidReused`], or [`Error::Win32`].
 pub fn inspect(target: ProcessId) -> Result<ProcessMetrics> {
     let handle = ProcessHandle::open_verified(target, PROCESS_QUERY_INFORMATION)?;
     let (_, cpu_time_ms) = handle.times()?;
@@ -178,6 +216,11 @@ pub fn inspect(target: ProcessId) -> Result<ProcessMetrics> {
     })
 }
 
+/// Returns `target`'s current working-set size in MiB. Shorthand for [`inspect`].
+///
+/// # Errors
+///
+/// Same as [`inspect`].
 pub fn working_set_mb(target: ProcessId) -> Result<f64> {
     inspect(target).map(|m| m.working_set_mb)
 }
@@ -200,6 +243,12 @@ fn read_remote_struct<T: Default>(handle: HANDLE, address: *const c_void) -> Res
     Ok(value)
 }
 
+/// Reads `target`'s command line from its remote PEB via `NtQueryInformationProcess` and `ReadProcessMemory`.
+///
+/// # Errors
+///
+/// Returns [`Error::OpenProcess`] (requires `PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`),
+/// [`Error::PidReused`], or [`Error::Win32`].
 pub fn command_line(target: ProcessId) -> Result<String> {
     let handle = ProcessHandle::open_verified(target, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ)?;
 

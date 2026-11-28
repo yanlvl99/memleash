@@ -3,6 +3,11 @@ name = "memleash"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Control Windows process working-set limits by application profile"
+keywords = ["windows", "win32", "memory", "working-set", "process"]
+categories = ["os::windows-apis", "memory-management"]
 
 [dependencies]
 memleash-profiles = { path = "crates/memleash-profiles" }
@@ -16,6 +21,7 @@ members = ["crates/memleash-profiles", "crates/memleash-win32"]
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
+repository = "https://github.com/yanlvl99/memleash"
 
 [workspace.dependencies]
 thiserror = "2"

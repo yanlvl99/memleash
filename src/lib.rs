@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
+//! Windows process [working-set](https://learn.microsoft.com/en-us/windows/win32/procthread/process-working-set)
+//! management by application profile.
+//!
+//! Re-exports [`memleash_profiles`] and [`memleash_win32`], and adds [`scan`] plus batch actions
+//! on [`AppSnapshot`].
+
 use std::collections::HashSet;
 
 pub use memleash_profiles as profiles;
@@ -16,38 +22,60 @@ pub use memleash_win32::{
     window_state, working_set_mb,
 };
 
+/// A single running process classified against an [`AppProfile`] during [`scan`].
 #[derive(Debug, Clone)]
 pub struct ScannedProcess {
+    /// Basic process metadata (PID, creation timestamp, parent PID, executable name).
     pub info: ProcessInfo,
+    /// Remote command line read from the PEB, or `None` if reading it failed (for example, access denied).
     pub command_line: Option<String>,
+    /// Matched role name.
     pub role: String,
+    /// Optional sub-label extracted from `command_line`.
     pub sub_label: Option<String>,
+    /// Stable PID-free identity (`"{role}:{sub_label}"` or `role`).
     pub identity: String,
+    /// Limits and management policy for the matched role.
     pub config: RoleConfig,
+    /// Point-in-time working-set, page-fault, and CPU counters, or `None` if inspection failed.
     pub metrics: Option<ProcessMetrics>,
+    /// `true` if this PID currently owns the foreground window.
     pub is_foreground: bool,
+    /// `true` if this PID currently owns an active WASAPI audio session.
     pub is_audio: bool,
 }
 
+/// Summary returned by [`AppSnapshot`] batch actions (`cap_all`, `empty_all`, `release_all`).
 #[must_use = "batch actions may have per-process failures; inspect the report"]
 #[derive(Debug, Default)]
 pub struct ActionReport {
+    /// Number of managed processes where the Win32 call succeeded.
     pub succeeded: usize,
+    /// Number of processes skipped because `config.managed` is `false`.
     pub skipped: usize,
+    /// Per-process errors as `(pid, Error)`. A failure on one PID does not abort the remaining processes.
     pub failures: Vec<(u32, Error)>,
 }
 
+/// Snapshot of a target application's processes, window state, and active audio sessions returned by [`scan`].
 #[derive(Debug, Clone)]
 pub struct AppSnapshot {
+    /// Target executable name from the profile.
     pub exe_name: String,
+    /// Resolved top-level window state across all discovered PIDs.
     pub window_state: WindowState,
+    /// Representative window chosen by [`window_state`], if any.
     pub window: Option<WindowCandidate>,
+    /// PIDs currently owning an active WASAPI audio session (empty if none or if WASAPI failed).
     pub active_audio_pids: HashSet<u32>,
+    /// `true` if [`active_audio_pids`] succeeded; `false` if WASAPI enumeration failed.
     pub audio_available: bool,
+    /// Discovered and classified processes.
     pub processes: Vec<ScannedProcess>,
 }
 
 impl ActionReport {
+    /// Returns `true` when `failures` is empty.
     pub fn is_ok(&self) -> bool {
         self.failures.is_empty()
     }
@@ -72,6 +100,9 @@ impl AppSnapshot {
         report
     }
 
+    /// Applies [`cap`] with `proc.config.initial_mb` to every managed process in the snapshot.
+    ///
+    /// When `trim` is `true`, calls [`empty_working_set`] right after capping each process.
     pub fn cap_all(&self, trim: bool) -> ActionReport {
         self.run_for_managed(|proc| {
             cap(proc.info.id, proc.config.initial_mb)?;
@@ -82,15 +113,27 @@ impl AppSnapshot {
         })
     }
 
+    /// Calls [`empty_working_set`] on every managed process in the snapshot.
     pub fn empty_all(&self) -> ActionReport {
         self.run_for_managed(|proc| empty_working_set(proc.info.id))
     }
 
+    /// Calls [`release`] on every managed process in the snapshot, restoring Windows default soft limits
+    /// (50 / 345 pages per [`SetProcessWorkingSetSizeEx`](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-setprocessworkingsetsizeex)).
     pub fn release_all(&self) -> ActionReport {
         self.run_for_managed(|proc| release(proc.info.id))
     }
 }
 
+/// Discovers running processes matching `profile.exe_name()`, classifies each one, and captures
+/// window state, active audio sessions, and per-process metrics.
+///
+/// Per-process `command_line` and `inspect` errors are stored as `None` on each [`ScannedProcess`],
+/// and WASAPI errors set `audio_available = false` instead of failing the whole scan.
+///
+/// # Errors
+///
+/// Returns [`Error::Win32`] if [`find_by_name`] fails to take the process snapshot.
 pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
     let raw_processes = find_by_name(profile.exe_name())?;
     let (audio_pids, audio_available) = match active_audio_pids() {
