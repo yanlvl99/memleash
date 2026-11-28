@@ -22,6 +22,10 @@ impl RoleConfig {
     }
 
     pub const fn with_initial_mb(mut self, initial_mb: u32) -> Self {
+        assert!(
+            initial_mb >= self.min_mb && initial_mb <= self.max_mb,
+            "initial_mb must be within min_mb..=max_mb"
+        );
         self.initial_mb = initial_mb;
         self
     }
