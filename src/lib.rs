@@ -134,3 +134,92 @@ pub fn scan(profile: &AppProfile) -> Result<AppSnapshot> {
         processes,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fake_scanned(id: ProcessId, config: RoleConfig) -> ScannedProcess {
+        ScannedProcess {
+            info: ProcessInfo {
+                id,
+                parent_pid: 0,
+                exe_name: "test.exe".to_string(),
+            },
+            command_line: None,
+            role: "Main".to_string(),
+            sub_label: None,
+            identity: "Main".to_string(),
+            config,
+            metrics: None,
+            is_foreground: false,
+            is_audio: false,
+        }
+    }
+
+    #[test]
+    fn action_report_is_ok_reflects_failures() {
+        let mut report = ActionReport::default();
+        assert!(report.is_ok());
+
+        report.failures.push((1, Error::InvalidLimit(0)));
+        assert!(!report.is_ok());
+    }
+
+    #[test]
+    fn snapshot_actions_skip_unmanaged_and_continue_after_failure() {
+        let me = ProcessId::from_pid(std::process::id()).expect("current ProcessId");
+        let stale = ProcessId {
+            pid: me.pid,
+            creation_time: 0,
+        };
+
+        let snap = AppSnapshot {
+            exe_name: "test.exe".to_string(),
+            window_state: WindowState::NotFound,
+            window: None,
+            active_audio_pids: HashSet::new(),
+            audio_available: true,
+            processes: vec![
+                fake_scanned(me, RoleConfig::new(4, 32).unmanaged()),
+                fake_scanned(stale, RoleConfig::new(4, 32)),
+                fake_scanned(me, RoleConfig::new(4, 32)),
+            ],
+        };
+
+        let report = snap.empty_all();
+        assert_eq!(report.skipped, 1);
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(report.failures.len(), 1);
+        assert!(matches!(report.failures[0].1, Error::PidReused { .. }));
+        assert!(!report.is_ok());
+    }
+
+    #[test]
+    fn scan_finds_current_process_and_handles_missing_exe() {
+        let exe = std::env::current_exe().expect("current_exe");
+        let name = exe
+            .file_name()
+            .expect("exe file name")
+            .to_string_lossy()
+            .into_owned();
+        let current_pid = std::process::id();
+
+        let profile = AppProfile::single(name, RoleConfig::new(4, 32));
+        let snap = scan(&profile).expect("scan current exe");
+        let current = snap
+            .processes
+            .iter()
+            .find(|p| p.info.id.pid == current_pid)
+            .expect("current PID in snapshot");
+        assert_eq!(current.identity, "Main");
+        assert!(current.command_line.is_some());
+        assert!(current.metrics.is_some());
+
+        let missing_profile =
+            AppProfile::single("__memleash_nonexistent__.exe", RoleConfig::new(4, 32));
+        let missing = scan(&missing_profile).expect("scan missing exe");
+        assert!(missing.processes.is_empty());
+        assert_eq!(missing.window_state, WindowState::NotFound);
+    }
+}
