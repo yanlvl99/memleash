@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
+/// Working-set limits and management policy for a single process role.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RoleConfig {
+    /// Minimum allowed cap in megabytes.
     pub min_mb: u32,
+    /// Maximum allowed cap in megabytes.
     pub max_mb: u32,
+    /// Initial cap applied when capping a process of this role, in megabytes.
     pub initial_mb: u32,
+    /// Whether this role should be managed by callers.
     pub managed: bool,
 }
 
 impl RoleConfig {
+    /// Creates a managed `RoleConfig` with `initial_mb` set to `max_mb`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `min_mb == 0` or `max_mb < min_mb`.
     pub const fn new(min_mb: u32, max_mb: u32) -> Self {
         assert!(min_mb >= 1, "min_mb must be at least 1");
         assert!(max_mb >= min_mb, "max_mb must be greater or equal min_mb");
@@ -21,6 +31,7 @@ impl RoleConfig {
         }
     }
 
+    /// Non-panicking version of [`RoleConfig::new`]. Returns `None` if `min_mb == 0` or `max_mb < min_mb`.
     pub const fn try_new(min_mb: u32, max_mb: u32) -> Option<Self> {
         if min_mb == 0 || max_mb < min_mb {
             return None;
@@ -33,6 +44,11 @@ impl RoleConfig {
         })
     }
 
+    /// Overrides the initial cap in megabytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `initial_mb` is outside `self.min_mb..=self.max_mb`.
     pub const fn with_initial_mb(mut self, initial_mb: u32) -> Self {
         assert!(
             initial_mb >= self.min_mb && initial_mb <= self.max_mb,
@@ -42,25 +58,33 @@ impl RoleConfig {
         self
     }
 
+    /// Marks this role as unmanaged so batch actions skip matching processes.
     pub const fn unmanaged(mut self) -> Self {
         self.managed = false;
         self
     }
 }
 
+/// Condition evaluated against a process to decide whether it belongs to a role.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatchRule {
+    /// Matches when the process owns an active audio session.
     IsAudio,
+    /// Matches the root process of the application's process tree.
     IsRoot,
+    /// Matches when the command line contains the given substring (ASCII case-insensitive).
     CmdContains(String),
+    /// Matches unconditionally.
     Any,
 }
 
 impl MatchRule {
+    /// Shorthand for [`MatchRule::CmdContains`].
     pub fn cmd_contains(pattern: impl Into<String>) -> Self {
         Self::CmdContains(pattern.into())
     }
 
+    /// Evaluates the rule against a process's command line and flags.
     pub fn matches(&self, cmd: &str, is_root: bool, is_audio: bool) -> bool {
         match self {
             Self::IsAudio => is_audio,
@@ -73,13 +97,18 @@ impl MatchRule {
     }
 }
 
+/// Rule for deriving a PID-free sub-label from a process's command line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubLabelRule {
+    /// Extracts a flag's value and prepends `prefix` (for example, `--renderer-client-id=6` -> `#6`).
     FlagValue { flag: String, prefix: String },
+    /// Extracts a flag's value and takes the lowercased segment before `separator`
+    /// (for example, `--utility-sub-type=network.mojom.NetworkService` -> `network`).
     FlagHead { flag: String, separator: char },
 }
 
 impl SubLabelRule {
+    /// Shorthand for [`SubLabelRule::FlagValue`].
     pub fn flag_value(flag: impl Into<String>, prefix: impl Into<String>) -> Self {
         Self::FlagValue {
             flag: flag.into(),
@@ -87,6 +116,7 @@ impl SubLabelRule {
         }
     }
 
+    /// Shorthand for [`SubLabelRule::FlagHead`].
     pub fn flag_head(flag: impl Into<String>, separator: char) -> Self {
         Self::FlagHead {
             flag: flag.into(),
@@ -94,6 +124,7 @@ impl SubLabelRule {
         }
     }
 
+    /// Extracts the sub-label from `cmd`, or returns `None` if the flag is absent or empty.
     pub fn extract(&self, cmd: &str) -> Option<String> {
         match self {
             Self::FlagValue { flag, prefix } => {
