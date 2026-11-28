@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 yanlvl99
 
-//! Low-level Windows primitives for process discovery, working-set limits,
-//! system memory availability, window state classification, and WASAPI audio sessions.
+//! Low-level Windows primitives for process discovery,
+//! [working-set](https://learn.microsoft.com/en-us/windows/win32/procthread/process-working-set) limits,
+//! system memory availability, window state classification, and
+//! [WASAPI](https://learn.microsoft.com/en-us/windows/win32/coreaudio/wasapi) audio sessions.
 
 pub mod audio;
 pub mod discovery;
