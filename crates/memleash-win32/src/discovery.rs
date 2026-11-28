@@ -61,3 +61,25 @@ pub fn find_by_name(exe_name: &str) -> Result<Vec<ProcessInfo>> {
 
     Ok(results)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_by_name_finds_current_exe_and_returns_empty_for_missing() {
+        let exe = std::env::current_exe().expect("current_exe");
+        let name = exe
+            .file_name()
+            .expect("exe file name")
+            .to_string_lossy()
+            .into_owned();
+        let current_pid = std::process::id();
+
+        let found = find_by_name(&name.to_ascii_uppercase()).expect("find_by_name");
+        assert!(found.iter().any(|p| p.id.pid == current_pid));
+
+        let missing = find_by_name("__memleash_nonexistent__.exe").expect("find missing");
+        assert!(missing.is_empty());
+    }
+}
