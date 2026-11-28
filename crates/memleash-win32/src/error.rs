@@ -35,5 +35,5 @@ pub enum Error {
     },
 }
 
-/// Convenience `Result` alias using [`Error`].
+/// Convenience `Result` alias using [`enum@Error`].
 pub type Result<T> = std::result::Result<T, Error>;
