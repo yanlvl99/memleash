@@ -232,7 +232,12 @@ mod tests {
             .fallback("Idle", RoleConfig::new(4, 16))
             .build();
         assert_eq!(custom.exe_name(), "custom.exe");
-        assert_eq!(custom.classify("custom.exe --worker", false, false).identity, "Worker");
+        assert_eq!(
+            custom
+                .classify("custom.exe --worker", false, false)
+                .identity,
+            "Worker"
+        );
         assert_eq!(custom.classify("custom.exe", false, false).identity, "Idle");
     }
 }
