@@ -3,5 +3,7 @@ name = "memleash-profiles"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Process role matching and application profiles for memleash"
 
 [dependencies]
