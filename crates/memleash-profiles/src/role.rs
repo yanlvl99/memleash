@@ -11,6 +11,8 @@ pub struct RoleConfig {
 
 impl RoleConfig {
     pub const fn new(min_mb: u32, max_mb: u32) -> Self {
+        assert!(min_mb >= 1, "min_mb must be at least 1");
+        assert!(max_mb >= min_mb, "max_mb must be greater or equal min_mb");
         Self {
             min_mb,
             max_mb,
