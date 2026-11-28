@@ -49,6 +49,10 @@ pub struct MemoryWatcher {
     high: HANDLE,
 }
 
+// SAFETY: Memory resource notification handles are kernel objects safe to query and close from any thread.
+unsafe impl Send for MemoryWatcher {}
+unsafe impl Sync for MemoryWatcher {}
+
 impl MemoryWatcher {
     pub fn new() -> Result<Self> {
         let low = unsafe { CreateMemoryResourceNotification(LowMemoryResourceNotification) }
